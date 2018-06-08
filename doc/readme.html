@@ -42,8 +42,10 @@ h2 a:hover, h3 a:hover { color: #F00; }
 <li><a href="http://peterodding.com/code/lua/apr/docs/#memcached_client">Memcached client</a></li>
 <li><a href="http://peterodding.com/code/lua/apr/docs/#command_argument_parsing">Command argument parsing</a></li>
 <li><a href="http://peterodding.com/code/lua/apr/docs/#http_request_parsing">HTTP request parsing</a></li>
+<li><a href="http://peterodding.com/code/lua/apr/docs/#ldap_connection_handling">LDAP connection handling</a></li>
 <li><a href="http://peterodding.com/code/lua/apr/docs/#process_handling">Process handling</a></li>
 <li><a href="http://peterodding.com/code/lua/apr/docs/#shared_memory">Shared memory</a></li>
+<li><a href="http://peterodding.com/code/lua/apr/docs/#signal_handling">Signal handling</a></li>
 <li><a href="http://peterodding.com/code/lua/apr/docs/#string_routines">String routines</a></li>
 <li><a href="http://peterodding.com/code/lua/apr/docs/#multi_threading">Multi threading</a></li>
 <li><a href="http://peterodding.com/code/lua/apr/docs/#thread_queues">Thread queues</a></li>
@@ -56,61 +58,89 @@ h2 a:hover, h3 a:hover { color: #F00; }
 </ul>
 
 
-<h2>How to get and install the module</h2>
+<h2>How to get and install the binding</h2>
 
-<p>You can find the source code of the most recently released version under <a href="http://peterodding.com/code/lua/apr/downloads">downloads</a>. The source code is also available online in the <a href="http://github.com/xolox/lua-apr">GitHub repository</a>. There are <a href="http://peterodding.com/code/lua/apr/downloads/lua-apr-0.18-2-win32.zip">Windows binaries</a> available that have been tested with <a href="http://code.google.com/p/luaforwindows/">Lua for Windows</a> v5.1.4-40. You can also build the Lua/APR binding yourself. Here are your options:</p>
+<p>You can find the source code of the most recently released version under <a href="http://peterodding.com/code/lua/apr/downloads">downloads</a>. The source code is also available online in the <a href="http://github.com/xolox/lua-apr">GitHub repository</a>. There are <a href="http://peterodding.com/code/lua/apr/downloads/lua-apr-0.20-win32.zip">Windows binaries</a> available that have been tested with <a href="http://code.google.com/p/luaforwindows/">Lua for Windows</a> v5.1.4-40 and there is an offical Debian Linux package. You can also build the Lua/APR binding yourself using the instructions below.</p>
 
-<h3>Install the Debian/Ubuntu package</h3>
+<h3>Install using Debian package</h3>
 
-<p>I've setup an experimental Debian package repository to make it easier to install the Lua/APR binding on Debian and Ubuntu. The following commands should help you get started (<a href="http://peterodding.com/code/lua/apr/packages/">see here for a detailed explanation</a>):</p>
+<p>The Lua/APR binding has an official Debian package which is available in <a href="http://packages.debian.org/source/wheezy/lua-apr">wheezy (testing)</a>, <a href="http://packages.debian.org/source/sid/lua-apr">sid (unstable)</a> and Ubuntu <a href="http://packages.ubuntu.com/source/oneiric/lua-apr">Oneiric Ocelot (11.10)</a>. If you are running any of those (or a newer release) the following commands should get you started:</p>
 
-<pre style="color: black; background: white" class="sourcecode lua">sudo&nbsp;apt<span style="color: #2239a8; font-weight: bold">-</span>key&nbsp;adv&nbsp;<span style="color: #558817">--keyserver&nbsp;keyserver.ubuntu.com&nbsp;--recv-keys&nbsp;6CD27CBF<br></span>sudo&nbsp;sh&nbsp;<span style="color: #2239a8; font-weight: bold">-</span>c&nbsp;<span style="color: #a8660d">'echo&nbsp;deb&nbsp;<a href="http://peterodding.com/code/lua/apr/packages&nbsp;./&nbsp;&gt;&gt;&nbsp;/etc/apt/sources.list'" style="color: #272fc2">http://peterodding.com/code/lua/apr/packages&nbsp;./&nbsp;&gt;&gt;&nbsp;/etc/apt/sources.list'</a></span><br>sudo&nbsp;apt<span style="color: #2239a8; font-weight: bold">-</span>get&nbsp;update<br>sudo&nbsp;apt<span style="color: #2239a8; font-weight: bold">-</span>get&nbsp;install&nbsp;<span style="color: #558817">--no-install-recommends&nbsp;lua-apr<br></span>lua&nbsp;<span style="color: #2239a8; font-weight: bold">-</span>e&nbsp;<span style="color: #a8660d">"require&nbsp;'apr.test'&nbsp;()"</span><br></pre>
+<pre><code>$ apt-get install liblua5.1-apr1
+$ lua -e "require 'apr.test' ()"
+</code></pre>
+
+<p>If you are running an older Debian release or a derivative of Debian which doesn&rsquo;t have the official package yet, you may be able to download and install one of the Debian packages manually from one of the three pages linked above.</p>
 
 <h3>Build on UNIX using LuaRocks</h3>
 
-<p>The easiest way to download, build &amp; install the Lua/APR binding is to use <a href="http://luarocks.org/">LuaRocks</a>:</p>
+<p>The easiest way to download, build and install the Lua/APR binding is to use <a href="http://luarocks.org/">LuaRocks</a>. The following commands will install the Lua/APR binding from the main repository and run the test suite to make sure everything works:</p>
 
-<pre style="color: black; background: white" class="sourcecode lua">$&nbsp;luarocks&nbsp;install&nbsp;http<span style="color: #2239a8; font-weight: bold">:</span><span style="color: #2239a8; font-weight: bold">/</span><span style="color: #2239a8; font-weight: bold">/</span>peterodding.com<span style="color: #2239a8; font-weight: bold">/</span>code<span style="color: #2239a8; font-weight: bold">/</span>lua<span style="color: #2239a8; font-weight: bold">/</span>apr<span style="color: #2239a8; font-weight: bold">/</span>downloads<span style="color: #2239a8; font-weight: bold">/</span>lua<span style="color: #2239a8; font-weight: bold">-</span>apr<span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">0.18</span><span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">2.</span>rockspec<br></pre>
+<pre><code>$ luarocks install lua-apr
+$ lua -e "require 'apr.test' ()"
+</code></pre>
 
-<p>If you have git installed you can also download and install the latest sources using the following command:</p>
+<p>If LuaRocks fails to build the Lua/APR binding this is likely because of missing dependencies. Lua/APR depends on the APR, APR-util and libapreq2 system libraries but LuaRocks cannot install these because it only deals with Lua modules. When the build fails the makefile runs a Lua script that knows how to detect missing dependencies on Debian, Ubuntu, Arch Linux, Red Hat, Fedora Core, Suse Linux and CentOS. As a general guideline for other systems and package managers, you'll need the binary and development packages of Lua 5.1, APR, APR-util and libapreq2.</p>
 
-<pre style="color: black; background: white" class="sourcecode lua">$&nbsp;luarocks&nbsp;install&nbsp;http<span style="color: #2239a8; font-weight: bold">:</span><span style="color: #2239a8; font-weight: bold">/</span><span style="color: #2239a8; font-weight: bold">/</span>peterodding.com<span style="color: #2239a8; font-weight: bold">/</span>code<span style="color: #2239a8; font-weight: bold">/</span>lua<span style="color: #2239a8; font-weight: bold">/</span>apr<span style="color: #2239a8; font-weight: bold">/</span>downloads<span style="color: #2239a8; font-weight: bold">/</span>lua<span style="color: #2239a8; font-weight: bold">-</span>apr<span style="color: #2239a8; font-weight: bold">-</span>scm<span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">1.</span>rockspec<br></pre>
+<p>The latest rockspec and sources are also available from the author&rsquo;s website (in case the main LuaRocks repository is unavailable or lagging behind):</p>
 
-<p>After installing the library you can run the test suite using the following command:</p>
+<pre><code>$ luarocks install http://peterodding.com/code/lua/apr/downloads/lua-apr-0.20.6-1.rockspec
+</code></pre>
 
-<pre style="color: black; background: white" class="sourcecode lua">$&nbsp;lua&nbsp;<span style="color: #2239a8; font-weight: bold">-</span>e&nbsp;<span style="color: #a8660d">"require&nbsp;'apr.test'&nbsp;()"</span><br></pre>
+<p>If you have git installed you can also download and install the latest sources directly from <a href="http://github.com/xolox/lua-apr">GitHub</a>:</p>
+
+<pre><code>$ luarocks install http://peterodding.com/code/lua/apr/downloads/lua-apr-scm-1.rockspec
+</code></pre>
 
 <h3>Build on UNIX using makefile</h3>
 
 <p>If you don&rsquo;t have LuaRocks installed the following shell commands should help you get started on UNIX:</p>
 
-<pre style="color: black; background: white" class="sourcecode lua">$&nbsp;<span style="color: #2239a8; font-weight: bold">if</span>&nbsp;which&nbsp;git<span style="color: #2239a8; font-weight: bold">;</span>&nbsp;<span style="color: #2239a8; font-weight: bold">then</span>&nbsp;<span style="color: #2239a8; font-weight: bold">#</span>&nbsp;Get&nbsp;the&nbsp;latest&nbsp;sources&nbsp;using&nbsp;`git'?<br>$&nbsp;&nbsp;&nbsp;git&nbsp;clone&nbsp;git<span style="color: #2239a8; font-weight: bold">:</span><span style="color: #2239a8; font-weight: bold">/</span><span style="color: #2239a8; font-weight: bold">/</span>github.com<span style="color: #2239a8; font-weight: bold">/</span>xolox<span style="color: #2239a8; font-weight: bold">/</span>lua<span style="color: #2239a8; font-weight: bold">-</span>apr.git<br>$&nbsp;<span style="color: #2239a8; font-weight: bold">else</span>&nbsp;<span style="color: #2239a8; font-weight: bold">#</span>&nbsp;Or&nbsp;get&nbsp;the&nbsp;most&nbsp;recently&nbsp;released&nbsp;archive&nbsp;using&nbsp;`wget'<span style="color: #2239a8; font-weight: bold">.</span><br>$&nbsp;&nbsp;&nbsp;wget&nbsp;http<span style="color: #2239a8; font-weight: bold">:</span><span style="color: #2239a8; font-weight: bold">/</span><span style="color: #2239a8; font-weight: bold">/</span>peterodding.com<span style="color: #2239a8; font-weight: bold">/</span>code<span style="color: #2239a8; font-weight: bold">/</span>lua<span style="color: #2239a8; font-weight: bold">/</span>apr<span style="color: #2239a8; font-weight: bold">/</span>downloads<span style="color: #2239a8; font-weight: bold">/</span>lua<span style="color: #2239a8; font-weight: bold">-</span>apr<span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">0.18</span><span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">2.</span>zip<br>$&nbsp;&nbsp;&nbsp;unzip&nbsp;lua<span style="color: #2239a8; font-weight: bold">-</span>apr<span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">0.18</span><span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">2.</span>zip<br>$&nbsp;&nbsp;&nbsp;mv&nbsp;lua<span style="color: #2239a8; font-weight: bold">-</span>apr<span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">0.18</span><span style="color: #2239a8; font-weight: bold">-</span><span style="color: #a8660d">2</span>&nbsp;lua<span style="color: #2239a8; font-weight: bold">-</span>apr<br>$&nbsp;fi<br>$&nbsp;cd&nbsp;lua<span style="color: #2239a8; font-weight: bold">-</span>apr<br>$&nbsp;sudo&nbsp;make&nbsp;install_deps&nbsp;<span style="color: #2239a8; font-weight: bold">#</span>&nbsp;installs&nbsp;build&nbsp;&amp;&nbsp;runtime&nbsp;dependencies&nbsp;<span style="color: #2239a8; font-weight: bold">for</span>&nbsp;Debian<span style="color: #2239a8; font-weight: bold">/</span>Ubuntu<br>$&nbsp;sudo&nbsp;make&nbsp;install&nbsp;<span style="color: #2239a8; font-weight: bold">#</span>&nbsp;installs&nbsp;apr.lua&nbsp;<span style="color: #2239a8; font-weight: bold">and</span>&nbsp;apr<span style="color: #2239a8; font-weight: bold">/</span>core.so&nbsp;<span style="color: #2239a8; font-weight: bold">in</span>&nbsp;<span style="color: #2239a8; font-weight: bold">/</span>usr<span style="color: #2239a8; font-weight: bold">/</span><span style="color: #2239a8; font-weight: bold">local</span><br>$&nbsp;lua&nbsp;<span style="color: #2239a8; font-weight: bold">-</span>e&nbsp;<span style="color: #a8660d">"require&nbsp;'apr.test'&nbsp;()"</span>&nbsp;<span style="color: #2239a8; font-weight: bold">#</span>&nbsp;runs&nbsp;the&nbsp;test&nbsp;suite<br></pre>
+<pre><code>$ if which git; then # Get the latest sources using `git'?
+$   git clone git://github.com/xolox/lua-apr.git
+$ else # Or get the most recently released archive using `wget'.
+$   wget http://peterodding.com/code/lua/apr/downloads/lua-apr-0.20.6-1.zip
+$   unzip lua-apr-0.20.6-1.zip
+$   mv lua-apr-0.20.6-1 lua-apr
+$ fi
+$ cd lua-apr
+$ sudo make install # installs apr.lua and apr/core.so in /usr/local
+$ lua -e "require 'apr.test' ()" # runs the test suite
+</code></pre>
 
 <p>The makefile creates a debug build by default. Use <code>sudo make install DO_RELEASE=1</code> to create a release build instead. Just be sure to run <code>make clean</code> when switching between debug/release mode to avoid linking incompatible object files.</p>
 
 <h3>Build on Windows using makefile</h3>
 
-<p>A makefile for Microsoft Windows is included in the repository. It has been tested on Windows XP with <code>NMAKE</code> from the free <a href="http://www.microsoft.com/express/Downloads/#2010-Visual-CPP">Microsoft Visual C++ Express</a> 2010 tool chain. If you don&rsquo;t have git installed you can <a href="http://github.com/xolox/lua-apr/zipball/master">download the latest sources</a> directly from GitHub as a ZIP file. Please note that the Windows makefile only builds the Lua/APR binding, you need to build APR yourself (see the <a href="http://apr.apache.org/compiling_win32.html">instructions</a>).</p>
+<p>A makefile for Microsoft Windows is included in the repository. It has been tested on Windows XP with <code>NMAKE</code> from the free <a href="http://www.microsoft.com/express/Downloads/#2010-Visual-CPP">Microsoft Visual C++ Express</a> 2010 tool chain. If you don&rsquo;t have git installed you can <a href="http://github.com/xolox/lua-apr/zipball/master">download the latest sources</a> directly from GitHub as a ZIP file.</p>
 
-<p>The makefile creates a debug build by default. Use <code>NMAKE /f Makefile.win DO_RELEASE=1</code> to create a release build instead. Just be sure to run <code>NMAKE /f Makefile.win clean</code> when switching between debug/release mode to avoid linking incompatible object files.</p>
+<p>At the top of the makefile several file locations are defined, you'll need to change these to match your system. The makefile creates a debug build by default. Use <code>NMAKE /f Makefile.win DO_RELEASE=1</code> to create a release build instead. Just be sure to run <code>NMAKE /f Makefile.win clean</code> when switching between debug/release mode to avoid linking incompatible object files.</p>
+
+<p>Please note that the Windows makefile only builds the Lua/APR binding, you need to build the APR, APR-util and APREQ libraries yourself. There are instructions available on <a href="http://apr.apache.org/compiling_win32.html">how to build APR/APR-util on apache.org</a> but <a href="https://github.com/xolox/lua-apr/blob/master/NOTES.md#readme">my notes on the process</a> may be a more useful starting point.</p>
+
+<p>I've also recently created a Windows batch script that bootstraps a Lua/APR development environment by downloading, unpacking, patching and building the libraries involved. To use it, download the <a href="http://peterodding.com/code/lua/apr/downloads/win32-bootstrap.zip">ZIP archive</a>, unpack it to a directory, open a Windows SDK command prompt in the directory where you unpacked the ZIP archive and execute <code>make.cmd</code>. I've only tested it on a 32 bit Windows XP virtual machine, but even if it doesn&rsquo;t work out of the box for you it may provide a useful starting point.</p>
 
 <h2>Status</h2>
 
 <p>The following functionality has not been implemented yet but is on the to-do list:</p>
 
 <ul>
+<li><strong>LDAP directory modification</strong> (creating, changing and deleting LDAP directory entries)</li>
+<li><strong>Asynchronous network communication</strong> (a binding for the <a href="http://apr.apache.org/docs/apr/trunk/group__apr__poll.html">pollset</a> module?)</li>
 <li><strong>Encrypted network communication</strong> (unfortunately this isn&rsquo;t provided by APR so <a href="https://github.com/xolox/lua-apr/blob/master/src/io_net.c">io_net.c</a> could get messy…)</li>
-<li>zhiguo zhao contributed an <strong>LDAP</strong> module which will soon be integrated in the Lua/APR binding</li>
 </ul>
 
 
 <h2>Contact</h2>
 
-<p>If you have questions, bug reports, suggestions, etc. the author can be contacted at <a href="&#x6d;&#97;&#105;&#x6c;&#x74;&#x6f;&#58;&#112;&#x65;&#x74;&#x65;&#114;&#64;&#x70;&#x65;&#116;&#101;&#x72;&#x6f;&#x64;&#x64;&#105;&#110;&#x67;&#x2e;&#x63;&#x6f;&#109;">&#112;&#x65;&#x74;&#x65;&#x72;&#64;&#x70;&#x65;&#x74;&#x65;&#x72;&#x6f;&#100;&#x64;&#x69;&#x6e;&#103;&#46;&#x63;&#111;&#x6d;</a>. The latest version is available at <a href="http://peterodding.com/code/lua/apr/">http://peterodding.com/code/lua/apr/</a> and <a href="http://github.com/xolox/lua-apr">http://github.com/xolox/lua-apr</a>.</p>
+<p>If you have questions, bug reports, suggestions, etc. the author can be contacted at <a href="&#109;&#x61;&#x69;&#x6c;&#116;&#111;&#58;&#x70;&#x65;&#x74;&#101;&#x72;&#64;&#x70;&#x65;&#116;&#x65;&#114;&#111;&#x64;&#100;&#x69;&#x6e;&#x67;&#46;&#x63;&#x6f;&#x6d;">&#112;&#101;&#116;&#x65;&#x72;&#x40;&#112;&#101;&#x74;&#101;&#x72;&#x6f;&#x64;&#x64;&#105;&#x6e;&#x67;&#x2e;&#x63;&#111;&#x6d;</a>. The latest version is available at <a href="http://peterodding.com/code/lua/apr/">http://peterodding.com/code/lua/apr/</a> and <a href="http://github.com/xolox/lua-apr">http://github.com/xolox/lua-apr</a>.</p>
 
 <h2>License</h2>
 
 <p>This software is licensed under the <a href="http://en.wikipedia.org/wiki/MIT_License">MIT license</a>.<br/>
-© 2011 Peter Odding (<a href="&#109;&#x61;&#105;&#x6c;&#116;&#x6f;&#58;&#x70;&#x65;&#x74;&#x65;&#114;&#64;&#x70;&#x65;&#116;&#101;&#114;&#111;&#x64;&#100;&#x69;&#110;&#x67;&#46;&#x63;&#x6f;&#109;">&#112;&#x65;&#x74;&#101;&#114;&#x40;&#x70;&#101;&#116;&#101;&#x72;&#x6f;&#x64;&#x64;&#x69;&#x6e;&#103;&#x2e;&#99;&#111;&#x6d;</a>) and zhiguo zhao (<a href="&#109;&#x61;&#x69;&#x6c;&#x74;&#111;&#x3a;&#122;&#x68;&#x61;&#111;&#122;&#103;&#x40;&#x67;&#x6d;&#97;&#x69;&#x6c;&#46;&#x63;&#x6f;&#x6d;">&#122;&#104;&#x61;&#111;&#x7a;&#x67;&#64;&#x67;&#x6d;&#x61;&#105;&#108;&#x2e;&#x63;&#x6f;&#x6d;</a>).</p>
+© 2011 Peter Odding (<a href="&#x6d;&#97;&#x69;&#108;&#x74;&#111;&#58;&#112;&#101;&#116;&#101;&#114;&#64;&#x70;&#x65;&#x74;&#x65;&#x72;&#111;&#x64;&#100;&#x69;&#110;&#103;&#x2e;&#x63;&#x6f;&#109;">&#112;&#x65;&#116;&#x65;&#x72;&#x40;&#x70;&#101;&#116;&#101;&#114;&#111;&#100;&#x64;&#105;&#110;&#103;&#x2e;&#x63;&#111;&#x6d;</a>) and zhiguo zhao (<a href="&#x6d;&#x61;&#x69;&#x6c;&#116;&#x6f;&#58;&#x7a;&#104;&#x61;&#111;&#122;&#x67;&#x40;&#x67;&#109;&#x61;&#105;&#108;&#x2e;&#99;&#111;&#x6d;">&#x7a;&#104;&#x61;&#111;&#122;&#103;&#64;&#x67;&#x6d;&#x61;&#105;&#108;&#x2e;&#99;&#x6f;&#x6d;</a>).</p>
+
+<p>The LDAP connection handling module includes parts of LuaLDAP, designed and implemented by Roberto Ierusalimschy, André Carregal and Tomás Guisasola.<br/>
+© 2003-2007 The Kepler Project.</p>
 </body>
 </html>

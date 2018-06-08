@@ -1,15 +1,14 @@
 # This is the UNIX makefile for the Lua/APR binding.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: June 16, 2011
+# Last Change: October 30, 2011
 # Homepage: http://peterodding.com/code/lua/apr/
 # License: MIT
 #
-# This makefile has been tested on Ubuntu Linux 10.04 after installing the
-# external dependencies using the `install_deps' target (see below).
+# This makefile has been tested on Ubuntu Linux 10.04.
 
 VERSION = $(shell grep _VERSION src/apr.lua | cut "-d'" -f2)
-RELEASE = $(shell grep _RELEASE src/apr.lua | cut "-d'" -f2)
+RELEASE = 1
 PACKAGE = lua-apr-$(VERSION)-$(RELEASE)
 
 # Based on http://www.luarocks.org/en/Recommended_practices_for_Makefiles
@@ -38,10 +37,12 @@ SOURCES = src/base64.c \
 		  src/filepath.c \
 		  src/fnmatch.c \
 		  src/getopt.c \
+		  src/http.c \
 		  src/io_dir.c \
 		  src/io_file.c \
 		  src/io_net.c \
 		  src/io_pipe.c \
+		  src/ldap.c \
 		  src/lua_apr.c \
 		  src/memcache.c \
 		  src/memory_pool.c \
@@ -49,6 +50,7 @@ SOURCES = src/base64.c \
 		  src/permissions.c \
 		  src/proc.c \
 		  src/shm.c \
+		  src/signal.c \
 		  src/stat.c \
 		  src/str.c \
 		  src/thread.c \
@@ -61,83 +63,68 @@ SOURCES = src/base64.c \
 		  src/xlate.c \
 		  src/xml.c
 
-# If you're building Lua/APR with LuaRocks it should locate the external
-# dependencies automatically, otherwise we fall back to `pkg-config'. Some
-# complicating factors: On Debian/Ubuntu the Lua pkg-config file is called
-# `lua5.1', on FreeBSD it's `lua-5.1' and on Arch Linux it's just `lua'. Also
-# `pkg-config --cflags apr-1' doesn't include -pthread while `apr-1-config
-# --cflags' does include this flag and this seems to be needed on some
-# platforms. See also issue #5 on GitHub: https://github.com/xolox/lua-apr/issues/5
-CFLAGS += $(shell pkg-config --cflags lua5.1 --silence-errors || pkg-config --cflags lua-5.1 --silence-errors || pkg-config --cflags lua) \
-		  $(shell apr-1-config --cflags --cppflags --includes 2>/dev/null || pkg-config --cflags apr-1) \
-		  $(shell apu-1-config --includes 2>/dev/null || pkg-config --cflags apr-util-1)
-LFLAGS += $(shell apr-1-config --link-ld --libs 2>/dev/null || pkg-config --libs apr-1) \
-		  $(shell apu-1-config --link-ld --libs 2>/dev/null || pkg-config --libs apr-util-1)
+# Determine compiler flags and linker flags for external dependencies using a
+# combination of pkg-config, apr-1-config, apu-1-config and apreq2-config.
+override CFLAGS += $(shell lua etc/make.lua --cflags)
+override LFLAGS += $(shell lua etc/make.lua --lflags)
 
 # Create debug builds by default but enable release
 # builds using the command line "make DO_RELEASE=1".
 ifndef DO_RELEASE
-CFLAGS += -g -DDEBUG
-LFLAGS += -g
+override CFLAGS += -g -DDEBUG
+override LFLAGS += -g
 endif
 
 # Enable profiling with "make PROFILING=1".
 ifdef PROFILING
-CFLAGS += -fprofile-arcs -ftest-coverage
-LFLAGS += -fprofile-arcs
-endif
-
-# Experimental support for HTTP request parsing using libapreq2.
-ifndef DISABLE_APREQ
-SOURCES += src/http.c
-CFLAGS += $(shell apreq2-config --includes)
-LFLAGS += $(shell apreq2-config --link-ld)
-else
-CFLAGS += -DLUA_APR_DISABLE_APREQ
+override CFLAGS += -fprofile-arcs -ftest-coverage
+override LFLAGS += -fprofile-arcs
 endif
 
 # Names of compiled object files.
 OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
 
+# The default build rule checks for missing system packages before trying to
+# build Lua/APR (only on supported platforms).
+default: $(BINARY_MODULE)
+
 # Build the binary module.
 $(BINARY_MODULE): $(OBJECTS) Makefile
-	$(CC) -shared -o $@ $(OBJECTS) $(LFLAGS)
+	$(CC) -shared -o $@ $(OBJECTS) $(LFLAGS) || lua etc/make.lua --check
 
 # Build the standalone libapreq2 binding.
 $(APREQ_BINARY): etc/apreq_standalone.c Makefile
-	$(CC) -Wall -shared -o $@ $(CFLAGS) -fPIC etc/apreq_standalone.c $(LFLAGS)
+	$(CC) -Wall -shared -o $@ $(CFLAGS) -fPIC etc/apreq_standalone.c $(LFLAGS) || lua etc/make.lua --check
 
 # Compile individual source code files to object files.
 $(OBJECTS): %.o: %.c src/lua_apr.h Makefile
-	$(CC) -Wall -c $(CFLAGS) -fPIC $< -o $@
+	$(CC) -Wall -c $(CFLAGS) -fPIC $< -o $@ || lua etc/make.lua --check
 
 # Always try to regenerate the error handling module.
 src/errno.c: etc/errors.lua Makefile
-	@lua etc/errors.lua > src/errno.c.new && mv -f src/errno.c.new src/errno.c || true
+	@lua etc/errors.lua
 
 # Install the Lua/APR binding under $LUA_DIR.
-install: $(BINARY_MODULE)
+install: $(BINARY_MODULE) docs
 	mkdir -p $(LUA_SHAREDIR)/apr/test
 	cp $(SOURCE_MODULE) $(LUA_SHAREDIR)/apr.lua
 	cp test/*.lua $(LUA_SHAREDIR)/apr/test
 	mkdir -p $(LUA_LIBDIR)/apr
 	cp $(BINARY_MODULE) $(LUA_LIBDIR)/apr/$(BINARY_MODULE)
-	if [ -e $(APREQ_BINARY) ]; then cp $(APREQ_BINARY) $(LUA_LIBDIR)/$(APREQ_BINARY); fi
-	make --no-print-directory docs
-	if [ ! -d $(LUA_APR_DOCS) ]; then mkdir -p $(LUA_APR_DOCS); fi
-	cp docs.html $(LUA_APR_DOCS)/
-	lua etc/wrap.lua < README.md > $(LUA_APR_DOCS)/readme.html
-	lua etc/wrap.lua < NOTES.md > $(LUA_APR_DOCS)/notes.html
-	lua etc/wrap.lua < TODO.md > $(LUA_APR_DOCS)/todo.html
+	[ ! -f $(APREQ_BINARY) ] || cp $(APREQ_BINARY) $(LUA_LIBDIR)/$(APREQ_BINARY)
+	[ -d $(LUA_APR_DOCS) ] || mkdir -p $(LUA_APR_DOCS)
+	cp doc/docs.html doc/notes.html doc/readme.html doc/todo.html $(LUA_APR_DOCS) 2>/dev/null || true
 
 # Remove previously installed files.
 uninstall:
 	rm -f $(LUA_SHAREDIR)/apr.lua
 	rm -fR $(LUA_SHAREDIR)/apr/test
 	rm -fR $(LUA_LIBDIR)/apr
+	cd $(LUA_APR_DOCS) && rm -r docs.html notes.html readme.html todo.html
+	rmdir $(LUA_APR_DOCS) 2>/dev/null || true
 
 # Run the test suite.
-test: $(BINARY_MODULE)
+test: install
 	export LD_PRELOAD=/lib/libSegFault.so; lua -e "require 'apr.test' ()"
 
 # Run the test suite under Valgrind to detect and analyze errors.
@@ -151,44 +138,40 @@ coverage:
 	lcov -d src -b . --capture --output-file etc/coverage/lua-apr.info
 	genhtml -o etc/coverage etc/coverage/lua-apr.info
 
-# Generate HTML documentation from Markdown embedded in source code.
-docs: etc/docs.lua $(SOURCE_MODULE) $(SOURCES)
-	@lua etc/docs.lua > docs.md
-	@lua etc/wrap.lua < docs.md > docs.html
+# Convert the Markdown documents to HTML.
+docs: doc/docs.md $(SOURCE_MODULE) $(SOURCES)
+	@lua etc/wrap.lua doc/docs.md doc/docs.html
+	@lua etc/wrap.lua README.md doc/readme.html
+	@lua etc/wrap.lua NOTES.md doc/notes.html
+	@lua etc/wrap.lua TODO.md doc/todo.html
 
-# Install the build dependencies using Debian/Ubuntu packages.
-# FIXME The libreadline-dev isn't really needed here is it?!
-install_deps:
-	apt-get install libapr1 libapr1-dev libaprutil1 libaprutil1-dev \
-		libaprutil1-dbd-sqlite3 libapreq2 libapreq2-dev lua5.1 \
-		liblua5.1-0 liblua5.1-0-dev libreadline-dev luarocks
-	luarocks install lua-discount
-	luarocks install http://peterodding.com/code/lua/lxsh/downloads/lxsh-0.6.1-1.rockspec
+# Extract the documentation from the source code and generate a Markdown file
+# containing all documentation including coverage statistics (if available).
+# XXX This file won't be regenerated automatically because A) the documentation
+# in the ZIP archives I release contains coverage statistics that cannot be
+# generated without first building and installing a profiling release and
+# running the test suite and B) new users certainly won't know how to generate
+# coverage statistics which means "make install" would overwrite the existing
+# documentation and lose the coverage statistics...
+doc/docs.md: etc/docs.lua
+	@[ -d doc ] || mkdir doc
+	@lua etc/docs.lua > doc/docs.md
 
-# Prepare a source ZIP archive and a Debian package 
-package: zip_package rockspec deb_package
-
-# Create a profiling build to run the test suite and generate documentation
-# including test coverage, then a clean build without profiling which we
-# can release.
-package_prerequisites:
+# Create a profiling build, run the test suite, generate documentation
+# including test coverage, then clean the intermediate files.
+package_prerequisites: clean
 	@echo Collecting coverage statistics using profiling build
-	@make --no-print-directory clean
 	@export PROFILING=1; lua etc/buildbot.lua --local
 	@echo Generating documentation including coverage statistics
-	@make --no-print-directory docs
-	@make --no-print-directory clean
+	@rm -f doc/docs.md; make --no-print-directory docs
 
 # Prepare a source ZIP archive from which Lua/APR can be build.
 zip_package: package_prerequisites
 	@rm -f $(PACKAGE).zip
 	@mkdir -p $(PACKAGE)/doc
-	@cp docs.html $(PACKAGE)/doc/apr.html
-	@lua etc/wrap.lua < README.md > $(PACKAGE)/doc/readme.html
-	@lua etc/wrap.lua < NOTES.md > $(PACKAGE)/doc/notes.html
-	@lua etc/wrap.lua < TODO.md > $(PACKAGE)/doc/todo.html
+	@cp doc/docs.html doc/notes.html doc/readme.html doc/todo.html $(PACKAGE)/doc
 	@mkdir -p $(PACKAGE)/etc
-	@cp -a etc/buildbot.lua etc/docs.lua etc/errors.lua etc/wrap.lua $(PACKAGE)/etc
+	@cp -a etc/buildbot.lua etc/make.lua etc/docs.lua etc/errors.lua etc/wrap.lua $(PACKAGE)/etc
 	@mkdir -p $(PACKAGE)/benchmarks
 	@cp -a benchmarks/* $(PACKAGE)/benchmarks
 	@mkdir -p $(PACKAGE)/examples
@@ -211,35 +194,12 @@ rockspec: zip_package
 		> lua-apr-$(VERSION)-$(RELEASE).rockspec
 	@echo Generated $(PACKAGE).rockspec
 
-# Create a Debian package using "checkinstall".
-deb_package: package_prerequisites
-	@echo "Lua/APR is a binding to the Apache Portable Runtime (APR) library." > description-pak
-	@echo "APR powers software such as the Apache webserver and Subversion and" >> description-pak
-	@echo "Lua/APR makes the APR operating system interfaces available to Lua." >> description-pak
-	@make --no-print-directory clean
-	@make --no-print-directory DO_RELEASE=1
-	checkinstall \
-		--default \
-		--backup=no \
-		--type=debian \
-		--pkgname=lua-apr \
-		--pkgversion=$(VERSION) \
-		--pkgrelease=$(RELEASE) \
-		--pkglicense=MIT \
-		--pkggroup=interpreters \
-		'--requires=libapr1,libaprutil1,libaprutil1-dbd-sqlite3,libapreq2' \
-		'--maintainer="Peter Odding <peter@peterodding.com>"' \
-		make install LUA_DIR=/usr
-	@rm -R description-pak doc-pak/
-
 # Clean generated files from working directory.
 clean:
-	@rm -Rf $(BINARY_MODULE) $(OBJECTS) etc/coverage
-	@rm -f $(APREQ_BINARY)
-	@lcov -q -z -d . || true
-	@rm -f src/*.gcov src/*.gcno
+	@rm -Rf $(OBJECTS) $(BINARY_MODULE) $(APREQ_BINARY) doc/docs.md
+	@git checkout src/errno.c 2>/dev/null || true
 
-.PHONY: install uninstall test valgrind coverage docs install_deps package \
-	package_prerequisites zip_package rockspec deb_package clean
+.PHONY: install uninstall test valgrind coverage docs \
+	package_prerequisites zip_package rockspec clean
 
 # vim: ts=4 sw=4 noet

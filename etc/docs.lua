@@ -3,7 +3,7 @@
  Documentation generator for the Lua/APR binding.
 
  Author: Peter Odding <peter@peterodding.com>
- Last Change: June 16, 2011
+ Last Change: October 30, 2011
  Homepage: http://peterodding.com/code/lua/apr/
  License: MIT
 
@@ -24,11 +24,13 @@ local SOURCES = [[
   io_file.c
   io_net.c
   io_pipe.c
+  ldap.c
   memcache.c
   getopt.c
   http.c
   proc.c
   shm.c
+  signal.c
   str.c
   thread.c
   thread_queue.c
@@ -241,16 +243,11 @@ end
 -- Convert documentation comments to Markdown hypertext. {{{1
 
 local function findrelease()
-  local handle = assert(io.open 'src/apr.lua')
-  local version, release
-  for line in handle:lines() do
-    version = version or line:match "^apr%._VERSION = '(.-)'"
-    release = release or line:match "^apr%._RELEASE = '(.-)'"
+  for line in io.lines 'src/apr.lua' do
+    local version = line:match "^apr%._VERSION = '(.-)'"
+    if version then return version end
   end
-  assert(handle:close())
-  assert(version, "Failed to determine Lua/APR version number!")
-  assert(release, "Failed to determine Lua/APR release number!")
-  return version .. '-' .. release
+  assert(false, "Failed to determine Lua/APR version number!")
 end
 
 local blocks = { trim([[
@@ -312,6 +309,7 @@ local function sig2privfun(s)
     s = s:gsub('^result_set_', 'dbr_')
     s = s:gsub('^xml_parser_', 'xml_')
     s = s:gsub('^mc_client_', 'mc_')
+    s = s:gsub('^ldap_conn', 'lua_apr_ldap')
     return s
   end
 end
@@ -387,6 +385,10 @@ blocks:add('%s', table.concat(lines, '\n'))
 
 local bsignore = {
   ['apr.dbd'] = true,
+  ['apr.ldap'] = true,
+  ['apr.ldap_info'] = true,
+  ['apr.ldap_url_check'] = true,
+  ['apr.ldap_url_parse'] = true,
   ['apr.os_default_encoding'] = true,
   ['apr.os_locale_encoding'] = true,
   ['apr.parse_cookie_header'] = true,
@@ -395,6 +397,7 @@ local bsignore = {
   ['apr.parse_query_string'] = true,
   ['apr.platform_get'] = true,
   ['apr.proc_fork'] = true,
+  ['apr.signal_names'] = true,
   ['apr.strfsize'] = true,
   ['apr.type'] = true,
   ['apr.uri_port_of_scheme'] = true,
@@ -405,6 +408,11 @@ local bsignore = {
   ['driver:driver'] = true,
   ['driver:transaction_mode'] = true,
   ['file:lock'] = true,
+  ['ldap_conn:bind'] = true,
+  ['ldap_conn:option_get'] = true,
+  ['ldap_conn:option_set'] = true,
+  ['ldap_conn:rebind_add'] = true,
+  ['ldap_conn:search'] = true,
   ['mc_client:add'] = true,
   ['mc_client:add_server'] = true,
   ['mc_client:add_server'] = true,
@@ -430,13 +438,16 @@ local function dumpentries(functions)
     local signature = entry.signature:gsub('%->', '→')
     local funcname = sig2pubfun(signature)
     local anchor = toanchor(funcname)
-    local covkey = sig2privfun(signature)
-    if not coverage[covkey] then covkey = 'lua_' .. covkey end
-    local tc = coverage[covkey] or ''
-    if tc ~= '' then
-      local template = '<span style="float: right; font-size: small; color: %s; opacity: 0.5">test coverage: %s<br></span>'
-      local color = tc >= 75 and 'green' or tc >= 50 and 'orange' or 'red'
-      tc = fmt(template, color, tc == 0 and 'none' or fmt('%i%%', tc))
+    local tc = ''
+    if next(coverage) then
+      local covkey = sig2privfun(signature)
+      if not coverage[covkey] then covkey = 'lua_' .. covkey end
+      tc = coverage[covkey] or ''
+      if tc ~= '' then
+        local template = '<span style="float: right; font-size: small; color: %s; opacity: 0.5">test coverage: %s<br></span>'
+        local color = tc >= 75 and 'green' or tc >= 50 and 'orange' or 'red'
+        tc = fmt(template, color, tc == 0 and 'none' or fmt('%i%%', tc))
+      end
     end
     blocks:add('### %s <a name="%s" href="#%s">`%s`</a>', tc, anchor, anchor, signature)
     blocks:add('%s', preprocess(entry.description))
@@ -452,6 +463,15 @@ local function htmlencode(s)
            :gsub('>', '&gt;'))
 end
 
+local custom_sorting = {
+  ['crypt.c'] = [[ apr.md5 apr.md5_encode apr.password_validate
+    apr.password_get apr.md5_init md5_context:update md5_context:digest
+    md5_context:reset apr.sha1 apr.sha1_init sha1_context:update
+    sha1_context:digest sha1_context:reset ]],
+  ['thread.c'] = [[ apr.thread apr.thread_create apr.thread_yield
+    thread:status thread:join ]],
+}
+
 for _, module in ipairs(sorted_modules) do
 
   local a = toanchor(module.name)
@@ -461,14 +481,9 @@ for _, module in ipairs(sorted_modules) do
     blocks:add('    %s', module.example:gsub('\n', '\n    '))
   end
 
-  if module.file == 'crypt.c' then
-    -- Custom sorting for the cryptography module.
-    local orderstr = [[ apr.md5 apr.md5_encode apr.password_validate
-        apr.password_get apr.md5_init md5_context:update md5_context:digest
-        md5_context:reset apr.sha1 apr.sha1_init sha1_context:update
-        sha1_context:digest sha1_context:reset ]]
+  if custom_sorting[module.file] then
     local ordertbl = { n = 0 }
-    for f in orderstr:gmatch '%S+' do
+    for f in custom_sorting[module.file]:gmatch '%S+' do
       ordertbl[f], ordertbl.n = ordertbl.n, ordertbl.n + 1
     end
     local function order(f)

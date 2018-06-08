@@ -27,8 +27,10 @@ h2 a:hover, h3 a:hover { color: #F00; }
 <h2>New features</h2>
 
 <ul>
+<li><strong>LDAP directory modification</strong> (creating, changing and deleting LDAP directory entries)</li>
+<li><strong>Asynchronous network communication</strong> (a binding for the <a href="http://apr.apache.org/docs/apr/trunk/group__apr__poll.html">pollset</a> module?)</li>
+<li><strong>Encrypted network communication</strong>. It appears that APR itself doesn&rsquo;t support this but clearly it&rsquo;s possible because there are dozens of projects that use APR and support encrypted network communication (the <a href="http://en.wikipedia.org/wiki/Apache_HTTP_Server">Apache HTTP server</a>, <a href="http://en.wikipedia.org/wiki/ApacheBench">ApacheBench</a>, <a href="http://en.wikipedia.org/wiki/Apache_Tomcat">Tomcat</a>, etc.)</li>
 <li>Make it possible to enable text mode for files, pipes and sockets on platforms where there is no distinction between text/binary mode (because <code>CR</code> + <code>LF</code> → <code>LF</code> translation can be useful on UNIX as well)</li>
-<li>Support for <strong>encrypted network communication</strong>. It appears that APR itself doesn&rsquo;t support this but clearly it&rsquo;s possible because there are dozens of projects that use APR and support encrypted network communication (the <a href="http://en.wikipedia.org/wiki/Apache_HTTP_Server">Apache HTTP server</a>, <a href="http://en.wikipedia.org/wiki/ApacheBench">ApacheBench</a>, <a href="http://en.wikipedia.org/wiki/Apache_Tomcat">Tomcat</a>, etc.)</li>
 </ul>
 
 
@@ -38,7 +40,6 @@ h2 a:hover, h3 a:hover { color: #F00; }
 <li>Find out why <strong><code>apr.xlate()</code> doesn&rsquo;t work on Windows</strong> (I can&rsquo;t seem to get <code>apr_iconv</code> working on Windows)</li>
 <li>Investigate <strong>escaping problem in <code>apr_proc_create()</code></strong> as found by the test for the <code>apr.namedpipe_create()</code> function (see <code>etc/tests.lua</code> around line 625)</li>
 <li>Why is the DBD <code>LD_PRELOAD</code> trick needed?! <a href="https://answers.launchpad.net/ubuntu/%2Bsource/apr-util/%2Bquestion/143914">More information</a></li>
-<li>When the Lua interpreter exits because of an error just after calling <code>apr.thread_create()</code>, the process can crash with a segmentation fault. This depends a lot on timing and only happens once in about 50 tries on my machine. So far I've managed to reproduce the crash using a <a href="http://en.wikipedia.org/wiki/GNU_Debugger">GDB</a> session scripted with <a href="http://en.wikipedia.org/wiki/Expect">Expect</a>.. The currently released code already includes <a href="https://github.com/xolox/lua-apr/blob/master/src/thread.c#L435">a mutex to wait for all child threads to exit</a> but this doesn&rsquo;t always work &mdash; it seems that sometimes the mutex is destroyed (outside of the Lua/APR binding&rsquo;s control) before the child thread is completely terminated (either that or a lot of stuff happens after calling <code>apr_thread_exit()</code>..)</li>
 </ul>
 
 
@@ -46,7 +47,7 @@ h2 a:hover, h3 a:hover { color: #F00; }
 
 <ul>
 <li>Propose the <a href="https://github.com/xolox/lua-apr/blob/master/src/http.c">libapreq2 binding</a> for inclusion as the official Lua language binding of <a href="http://httpd.apache.org/apreq/">libapreq2</a>? (first make the binding a lot more complete)</li>
-<li>Integrate the LDAP binding contributed by zhiguo zhao!</li>
+<li><a href="http://davidz25.blogspot.com/2011/06/writing-c-library-part-1.html">Maybe</a> I shouldn&rsquo;t be using <code>atexit()</code> to call <code>apr_terminate()</code>? (BTW the whole linked blog post is interesting, as is the follow-up post)</li>
 </ul>
 
 </body>

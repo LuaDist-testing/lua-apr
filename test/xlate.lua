@@ -3,7 +3,7 @@
  Unit tests for the character encoding translation module of the Lua/APR binding.
 
  Author: Peter Odding <peter@peterodding.com>
- Last Change: March 27, 2011
+ Last Change: July 3, 2011
  Homepage: http://peterodding.com/code/lua/apr/
  License: MIT
 
@@ -16,11 +16,6 @@ if not status then
 end
 local helpers = require 'apr.test.helpers'
 
-if apr.platform_get() == 'WIN32' then
-  helpers.warning "Character encoding translation unsupported on Windows!\n"
-  return false
-end
-
 local utf8 = "Edelwei\195\159"
 local utf7 = "Edelwei+AN8-"
 local latin1 = "Edelwei\223"
@@ -30,7 +25,7 @@ local latin2 = "Edelwei\223"
 assert(utf8 == assert(apr.xlate(utf8, 'UTF-8', 'UTF-8')))
 
 -- 2. UTF-8 <-> ISO-8859-1
-assert(latin1 == assert(apr.xlate(utf8, 'UTF-8', 'ISO-8859-1')))
+assert(latin1 == assert(apr.xlate(utf8, 'UTF-8', 'ISO-8859-1'), "(known to fail on Windows)"))
 assert(utf8 == assert(apr.xlate(latin1, 'ISO-8859-1', 'UTF-8')))
 
 -- 3. ISO-8859-1 <-> ISO-8859-2, identity

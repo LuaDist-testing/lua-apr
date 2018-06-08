@@ -1,14 +1,18 @@
 /* Miscellaneous functions module for the Lua/APR binding.
  *
  * Author: Peter Odding <peter@peterodding.com>
- * Last Change: June 16, 2011
+ * Last Change: October 29, 2011
  * Homepage: http://peterodding.com/code/lua/apr/
  * License: MIT
  */
 
 #include "lua_apr.h"
+#include <apr_ldap.h> /* APR_HAS_LDAP */
 #include <apr_portable.h>
 #include <ctype.h>
+#if LUA_APR_HAVE_APREQ
+#include <apreq_version.h>
+#endif
 
 /* Used to make sure that APR is only initialized once. */
 static int apr_was_initialized = 0;
@@ -27,6 +31,9 @@ lua_apr_objtype *lua_apr_types[] = {
   &lua_apr_dbd_type,
   &lua_apr_dbr_type,
   &lua_apr_dbp_type,
+# if APR_HAS_LDAP
+  &lua_apr_ldap_type,
+# endif
   &lua_apr_memcache_type,
   &lua_apr_memcache_server_type,
   &lua_apr_md5_type,
@@ -95,7 +102,7 @@ LUA_APR_EXPORT int luaopen_apr_core(lua_State *L)
     /* getopt.c -- command argument parsing. */
     { "getopt", lua_apr_getopt },
 
-#   ifndef LUA_APR_DISABLE_APREQ
+#   if LUA_APR_HAVE_APREQ
     /* http.c -- HTTP request parsing. */
     { "parse_headers", lua_apr_parse_headers },
     { "parse_multipart", lua_apr_parse_multipart },
@@ -141,6 +148,14 @@ LUA_APR_EXPORT int luaopen_apr_core(lua_State *L)
     { "namedpipe_create", lua_apr_namedpipe_create },
     { "pipe_create", lua_apr_pipe_create },
 
+#   if APR_HAS_LDAP
+    /* ldap.c -- LDAP connection handling. */
+    { "ldap", lua_apr_ldap },
+    { "ldap_info", lua_apr_ldap_info },
+    { "ldap_url_check", lua_apr_ldap_url_check },
+    { "ldap_url_parse", lua_apr_ldap_url_parse },
+#   endif
+
     /* proc -- process handling. */
     { "proc_create", lua_apr_proc_create },
     { "proc_detach", lua_apr_proc_detach },
@@ -152,6 +167,13 @@ LUA_APR_EXPORT int luaopen_apr_core(lua_State *L)
     { "shm_create", lua_apr_shm_create },
     { "shm_attach", lua_apr_shm_attach },
     { "shm_remove", lua_apr_shm_remove },
+
+    /* signal.c -- signal handling. */
+    { "signal", lua_apr_signal },
+    { "signal_raise", lua_apr_signal_raise },
+    { "signal_block", lua_apr_signal_block },
+    { "signal_unblock", lua_apr_signal_unblock },
+    { "signal_names", lua_apr_signal_names },
 
     /* str.c -- string handling. */
     { "strnatcmp", lua_apr_strnatcmp },
@@ -261,22 +283,33 @@ int lua_apr_platform_get(lua_State *L)
   return 1;
 }
 
-/* apr.version_get() -> apr_version [, apu_version] {{{1
+/* apr.version_get() -> versions_table {{{1
  *
- * Get the version number of the Apache Portable Runtime as a string. The
- * string contains three numbers separated by dots. These numbers have the
- * following meaning:
+ * Get the versions of the libraries used by the Lua/APR binding.
+ * Returns a table with one or more of the following fields:
  *
- *  - The 1st number is used for major [API] [api] changes that can cause
- *    compatibility problems between the Lua/APR binding and APR library
- *  - The 2nd number is used for minor API changes that shouldn't impact
- *    existing functionality in the Lua/APR binding
- *  - The 3rd number is used exclusively for bug fixes
+ *  - **apr**: The version of the Apache Portable Runtime library. This field
+ *    is always available.
  *
- * The second return value, the version number of the APR utility library, is
- * only available when Lua/APR is compiled against APR 1.x because in APR 2.x
- * the utility library has been absorbed back into the APR library; there is no
- * longer a distinction between the APR core and APR utility libraries.
+ *  - **aprutil**: The version of the APR utility library. This field is only
+ *    available when Lua/APR is compiled against APR and APR-util 1.x because
+ *    in version 2.x the utility library has been absorbed back into the APR
+ *    library; there is no longer a distinction between the APR core and APR
+ *    utility libraries.
+ *
+ *  - **apreq**: The version of the HTTP request parsing library. This field is
+ *    only available when the libapreq2 library is installed.
+ *
+ * Each field is a string containing three numbers separated by dots. These
+ * numbers have the following meaning:
+ *
+ * 1. Major [API] [api] changes that can cause compatibility problems between
+ *    the Lua/APR binding and APR library
+ *
+ * 2. Minor API changes that shouldn't impact existing functionality in the
+ *    Lua/APR binding
+ *
+ * 3. Used exclusively for bug fixes
  *
  * This function can be useful when you want to know whether a certain bug fix
  * has been applied to APR and/or APR-util or if you want to report a bug in
@@ -291,13 +324,18 @@ int lua_apr_platform_get(lua_State *L)
 
 int lua_apr_version_get(lua_State *L)
 {
+  lua_newtable(L);
   lua_pushstring(L, apr_version_string());
+  lua_setfield(L, -2, "apr");
 # if APR_MAJOR_VERSION < 2
   lua_pushstring(L, apu_version_string());
-  return 2;
-# else
-  return 1;
+  lua_setfield(L, -2, "aprutil");
 # endif
+# if LUA_APR_HAVE_APREQ
+  lua_pushstring(L, apreq_version_string());
+  lua_setfield(L, -2, "apreq");
+# endif
+  return 1;
 }
 
 /* apr.os_default_encoding() -> name {{{1
