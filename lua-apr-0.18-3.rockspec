@@ -12,10 +12,10 @@
 --]]
 
 package = 'Lua-APR'
-version = '0.18-2'
+version = '0.18-3'
 -- LuaDist source
 source = {
-  tag = "0.18-2",
+  tag = "0.18-3",
   url = "git://github.com/LuaDist-testing/lua-apr.git"
 }
 -- Original source
@@ -37,6 +37,11 @@ dependencies = { 'lua >= 5.1' }
 external_dependencies = {
   platforms = {
     unix = {
+      APR = { header = 'apr-1.0/apr.h', library = 'apr-1' },
+      APU = { header = 'apr-1.0/apu.h', library = 'aprutil-1' },
+      APREQ = { header = 'apreq2/apreq.h', library = 'apreq2' },
+    },
+    macosx = {
       APR = { header = 'apr-1/apr.h', library = 'apr-1'},
       APU = { header = 'apr-1/apu.h', library = 'aprutil-1' },
       APREQ = { header = 'apreq2/apreq.h', library = 'apreq2' },
